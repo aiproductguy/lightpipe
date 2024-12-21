@@ -116,3 +116,66 @@ Find various integration examples in the `/examples` directory. These examples s
 We’re continuously evolving! We'd love to hear your feedback and understand which hooks and features would best suit your use case. Feel free to reach out and become a part of our Open WebUI community!
 
 Our vision is to push **Pipelines** to become the ultimate plugin framework for our AI interface, **Open WebUI**. Imagine **Open WebUI** as the WordPress of AI interfaces, with **Pipelines** being its diverse range of plugins. Join us on this exciting journey! 🌍
+
+### Docker Compose together with Open WebUI
+
+Using [Docker Compose](https://docs.docker.com/compose/) simplifies the management of multi-container Docker applications and provides better security through isolated container networking.
+
+1. **Create a `docker-compose.yaml` file** with the following content:
+
+```yaml
+services:
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - OPENAI_API_BASE=http://pipelines:9099
+      - OPENAI_API_KEY=0p3n-w3bu!
+    networks:
+      - app-network
+    depends_on:
+      - pipelines
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    volumes:
+      - pipelines:/app/pipelines
+    environment:
+      - PIPELINES_API_KEY=0p3n-w3bu!
+    networks:
+      - app-network
+    restart: always
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  open-webui: {}
+  pipelines: {}
+```
+
+2. **Start the services:**
+```bash
+docker compose up -d
+```
+
+3. **Access Open WebUI** at `http://localhost:3000`
+
+> [!IMPORTANT]
+> - The Pipelines service is only accessible within the Docker network by the Open WebUI container, providing an additional layer of security.
+> - The configuration automatically sets up the OpenAI API connection in Open WebUI to use the Pipelines service.
+> - Make sure to change the default API key (`0p3n-w3bu!`) in a production environment.
+
+To stop the services:
+```bash
+docker compose down
+```
+
+To view logs:
+```bash
+docker compose logs -f
+```

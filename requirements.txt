@@ -4,6 +4,7 @@ pydantic==2.7.1
 python-multipart==0.0.9
 python-socketio
 grpcio
+python-dotenv
 
 passlib==1.7.4
 passlib[bcrypt]
@@ -12,6 +13,8 @@ PyJWT[crypto]
 requests==2.32.2
 aiohttp==3.9.5
 httpx
+
+lightrag
 
 # AI libraries
 openai
@@ -60,6 +63,7 @@ seaborn
 selenium
 playwright
 beautifulsoup4
+browser_use
 
 # Llama Index for RAG
 llama-index
