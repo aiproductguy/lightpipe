@@ -1,3 +1,13 @@
+"""
+title: LightRAG Pipeline
+author: AI Pro
+date: 2024-12-21
+version: 1.0
+license: MIT
+description: A pipeline for retrieving relevant information from a knowledge base using the LightRAG library.
+requirements: lightrag, llama-index-readers-web
+"""
+
 from typing import List, Union, Generator, Iterator
 from schemas import OpenAIChatMessage
 from pydantic import BaseModel
