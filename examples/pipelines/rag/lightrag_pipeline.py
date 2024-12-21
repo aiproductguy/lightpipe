@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 from lightrag import LightRAG, QueryParam
-from lightrag.llm import gpt_4o_mini_complete
+from lightrag.llm import gpt_4o_mini_complete, gpt_4o_complete
 from llama_index.readers.web import SimpleWebPageReader
 
 # Load environment variables
@@ -12,9 +12,24 @@ load_dotenv()
 
 class Pipeline:
     class Valves(BaseModel):
+        # OpenAI Configuration
         OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY")
+        
+        # LightRAG Configuration
         WORKING_DIR: str = os.getenv("WORKING_DIR", ".ra")
         SEARCH_MODE: str = "hybrid"  # Can be 'naive', 'local', 'global', or 'hybrid'
+        LLM_MODEL: str = "gpt-4"  # Can be 'gpt-4' or other OpenAI models
+        USE_MINI_MODEL: bool = True  # Whether to use gpt_4o_mini_complete or gpt_4o_complete
+        
+        # Web Scraping Configuration
+        TARGET_URL: str = "https://lightrag.github.io/"
+        HTML_TO_TEXT: bool = True
+        
+        # Index Configuration
+        CHUNK_SIZE: int = 1000
+        CHUNK_OVERLAP: int = 200
+        DISTANCE_METRIC: str = "cosine"  # Can be 'cosine', 'euclidean', etc.
+        TOP_K: int = 5  # Number of chunks to retrieve
 
     def __init__(self):
         self.name = "LightRAG Pipeline"
@@ -30,10 +45,16 @@ class Pipeline:
         # Create working directory if it doesn't exist
         os.makedirs(self.valves.WORKING_DIR, exist_ok=True)
 
-        # Initialize LightRAG
+        # Initialize LightRAG with appropriate model function
+        llm_func = gpt_4o_mini_complete if self.valves.USE_MINI_MODEL else gpt_4o_complete
+        
         self.rag = LightRAG(
             working_dir=self.valves.WORKING_DIR,
-            llm_model_func=gpt_4o_mini_complete,
+            llm_model_func=llm_func,
+            chunk_size=self.valves.CHUNK_SIZE,
+            chunk_overlap=self.valves.CHUNK_OVERLAP,
+            distance_metric=self.valves.DISTANCE_METRIC,
+            top_k=self.valves.TOP_K
         )
 
         try:
@@ -44,9 +65,9 @@ class Pipeline:
         except FileNotFoundError:
             # If no index exists, create new one
             print("Creating new index...")
-            # Scrape lightrag.github.io
-            reader = SimpleWebPageReader(html_to_text=True)
-            documents = await reader.aload_data(["https://lightrag.github.io/"])
+            # Scrape target URL
+            reader = SimpleWebPageReader(html_to_text=self.valves.HTML_TO_TEXT)
+            documents = await reader.aload_data([self.valves.TARGET_URL])
             
             # Insert documents into LightRAG
             for doc in documents:
@@ -58,7 +79,18 @@ class Pipeline:
         pass
 
     async def on_valves_updated(self):
-        pass
+        # Reinitialize LightRAG with updated settings
+        llm_func = gpt_4o_mini_complete if self.valves.USE_MINI_MODEL else gpt_4o_complete
+        
+        self.rag = LightRAG(
+            working_dir=self.valves.WORKING_DIR,
+            llm_model_func=llm_func,
+            chunk_size=self.valves.CHUNK_SIZE,
+            chunk_overlap=self.valves.CHUNK_OVERLAP,
+            distance_metric=self.valves.DISTANCE_METRIC,
+            top_k=self.valves.TOP_K
+        )
+        print("LightRAG reinitialized with updated valves")
 
     async def inlet(self, body: dict, user: dict) -> dict:
         return body
@@ -75,7 +107,11 @@ class Pipeline:
         search_mode = body.get("search_mode", self.valves.SEARCH_MODE)
         
         # Create query parameters
-        query_param = QueryParam(mode=search_mode)
+        query_param = QueryParam(
+            mode=search_mode,
+            top_k=self.valves.TOP_K,
+            distance_metric=self.valves.DISTANCE_METRIC
+        )
         
         # Generate response
         response = self.rag.query(user_message, param=query_param)
