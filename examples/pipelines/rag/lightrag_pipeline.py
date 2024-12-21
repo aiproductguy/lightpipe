@@ -13,7 +13,8 @@ from schemas import OpenAIChatMessage
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
-from lightrag import LightRAG, QueryParam
+from lightrag.base import QueryParam
+from lightrag.lightrag import RAG as LightRAG
 from lightrag.llm import gpt_4o_mini_complete, gpt_4o_complete
 from llama_index.readers.web import SimpleWebPageReader
 
