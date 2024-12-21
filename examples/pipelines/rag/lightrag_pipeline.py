@@ -13,31 +13,62 @@ load_dotenv()
 class Pipeline:
     class Valves(BaseModel):
         # OpenAI Configuration
-        OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY")
+        OPENAI_API_KEY: str
         
         # LightRAG Configuration
-        WORKING_DIR: str = os.getenv("WORKING_DIR", ".ra")
-        SEARCH_MODE: str = "hybrid"  # Can be 'naive', 'local', 'global', or 'hybrid'
-        LLM_MODEL: str = "gpt-4"  # Can be 'gpt-4' or other OpenAI models
-        USE_MINI_MODEL: bool = True  # Whether to use gpt_4o_mini_complete or gpt_4o_complete
+        WORKING_DIR: str
+        SEARCH_MODE: str  # Can be 'naive', 'local', 'global', or 'hybrid'
+        LLM_MODEL: str  # Can be 'gpt-4' or other OpenAI models
+        USE_MINI_MODEL: bool  # Whether to use gpt_4o_mini_complete or gpt_4o_complete
         
         # Web Scraping Configuration
-        TARGET_URL: str = "https://lightrag.github.io/"
-        HTML_TO_TEXT: bool = True
+        TARGET_URL: str
+        HTML_TO_TEXT: bool
         
         # Index Configuration
-        CHUNK_SIZE: int = 1000
-        CHUNK_OVERLAP: int = 200
-        DISTANCE_METRIC: str = "cosine"  # Can be 'cosine', 'euclidean', etc.
-        TOP_K: int = 5  # Number of chunks to retrieve
+        CHUNK_SIZE: int
+        CHUNK_OVERLAP: int
+        DISTANCE_METRIC: str  # Can be 'cosine', 'euclidean', etc.
+        TOP_K: int  # Number of chunks to retrieve
 
     def __init__(self):
+        self.type = "pipeline"
         self.name = "LightRAG Pipeline"
+        self.valves = self.Valves(
+            **{
+                # OpenAI Configuration
+                "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", "your-openai-api-key-here"),
+                
+                # LightRAG Configuration
+                "WORKING_DIR": os.getenv("WORKING_DIR", ".ra"),
+                "SEARCH_MODE": os.getenv("SEARCH_MODE", "hybrid"),
+                "LLM_MODEL": os.getenv("LLM_MODEL", "gpt-4"),
+                "USE_MINI_MODEL": os.getenv("USE_MINI_MODEL", "true").lower() == "true",
+                
+                # Web Scraping Configuration
+                "TARGET_URL": os.getenv("TARGET_URL", "https://lightrag.github.io/"),
+                "HTML_TO_TEXT": os.getenv("HTML_TO_TEXT", "true").lower() == "true",
+                
+                # Index Configuration
+                "CHUNK_SIZE": int(os.getenv("CHUNK_SIZE", "1000")),
+                "CHUNK_OVERLAP": int(os.getenv("CHUNK_OVERLAP", "200")),
+                "DISTANCE_METRIC": os.getenv("DISTANCE_METRIC", "cosine"),
+                "TOP_K": int(os.getenv("TOP_K", "5"))
+            }
+        )
         self.rag = None
-        self.valves = self.Valves()
+        self.set_pipelines()
         
         # Set OpenAI API key
         os.environ["OPENAI_API_KEY"] = self.valves.OPENAI_API_KEY
+
+    def set_pipelines(self):
+        search_modes = ["naive", "local", "global", "hybrid"]
+        self.pipelines = [
+            {"id": mode, "name": f"LightRAG ({mode.capitalize()} Search)"} 
+            for mode in search_modes
+        ]
+        print(f"lightrag_pipeline - search modes: {self.pipelines}")
 
     async def on_startup(self):
         print(f"on_startup:{__name__}")
@@ -79,6 +110,9 @@ class Pipeline:
         pass
 
     async def on_valves_updated(self):
+        # Update pipelines
+        self.set_pipelines()
+        
         # Reinitialize LightRAG with updated settings
         llm_func = gpt_4o_mini_complete if self.valves.USE_MINI_MODEL else gpt_4o_complete
         
@@ -103,8 +137,8 @@ class Pipeline:
     ) -> Union[str, Generator, Iterator]:
         print(f"pipe:{__name__}")
 
-        # Get search mode from body or use default
-        search_mode = body.get("search_mode", self.valves.SEARCH_MODE)
+        # Get search mode from model_id or use default
+        search_mode = model_id or self.valves.SEARCH_MODE
         
         # Create query parameters
         query_param = QueryParam(
