@@ -55,7 +55,8 @@ llama-index = "*"
 llama-index-llms-ollama = "*"
 starlette = "*"
 sseclient-py = "^1.8.0"
-lightrag-hku = "^1.0.6"
+lightrag-hku = "1.0.6"
+python-dotenv = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core"]

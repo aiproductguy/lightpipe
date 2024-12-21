@@ -12,6 +12,3 @@ PyJWT[crypto]
 requests==2.32.2
 aiohttp==3.9.5
 httpx
-
-lightrag
-
